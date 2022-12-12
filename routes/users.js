@@ -20,6 +20,8 @@ router.post('/register', async (req, res, next) => {
   try {
     const email = req.body.email;
     const password = req.body.password;
+    const name = req.body.firstName + ' ' + req.body.lastName;
+    const address = 'foh';
 
     const saltRounds = 5; // For prod apps, saltRounds are going to be between 5 and 10
     const salt = await bcrypt.genSalt(saltRounds);
@@ -29,6 +31,8 @@ router.post('/register', async (req, res, next) => {
       id: v4(),
       email: email,
       password: passwordHash,
+      name: name,
+      address: address,
     }; // Simulating us creating a user in the database
 
     const insertResult = await db().collection("users").insertOne(user);
@@ -171,6 +175,49 @@ router.get('/message', async (req, res, next) => {
     // 401 status means access denied
     return res.status(401).json({ success: false, message: err })
 
+  }
+})
+
+
+
+router.post('/checkout', async (req, res, next) => {
+  try {
+
+    const userData = {
+      // just email
+      user: req.body.recentOrder.user,
+      name: req.body.recentOrder.name,
+      address: req.body.recentOrder.address,
+      purchases: req.body.recentOrder.purchases,
+    }
+    // console.log(req.body.recentOrder.user)
+
+    const purchase = await db().collection('purchases').insertOne({
+      user: userData.user,
+      address: userData.address,
+      purchases: userData.purchases,
+    })
+
+
+
+    const user = await db().collection("users").update({
+      email: userData.user
+    }, { $set: { 'address': userData.address }, $push: { purchaseHistory: purchase.insertedId } })
+
+
+    console.log(purchase)
+    console.log(user)
+
+    // console.log(user)
+
+    res.json({
+      success: true,
+      // order: recentOrder
+    })
+  }
+  catch (err) {
+    console.log(err)
+    return res.status(401).json({ success: false, message: err })
   }
 })
 
