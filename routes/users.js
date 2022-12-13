@@ -70,8 +70,6 @@ router.post('/login', async (req, res, next) => {
     console.log(user)
     const hashedUserPassword = user.password;
 
-
-
     // bcrypt compare takes two arguments, the first is the input plain text password and the second is the hashed password that is being stored on the user document. The compare function returns a boolean which will be true of the passwords match and false if they do not.
     const passwordMatch = await bcrypt.compare(password, hashedUserPassword);
 
@@ -101,6 +99,7 @@ router.post('/login', async (req, res, next) => {
       date: new Date(),
       userId: user.id,
       scope: userType,
+      userData: user
     }
 
     const exp = Math.floor(Date.now() / 1000) + (60 * 60);
@@ -116,7 +115,7 @@ router.post('/login', async (req, res, next) => {
     const token = jwt.sign(payload, jwtSecretKey);
 
     res.json({
-      success: true, token, email
+      success: true, token, email, userData
     });
 
   }
@@ -220,6 +219,51 @@ router.post('/checkout', async (req, res, next) => {
   catch (err) {
     console.log(err)
     return res.status(401).json({ success: false, message: err })
+  }
+})
+
+
+router.post('/userinfo', async (req, res, next) => {
+  try {
+    const email = req.body.email;
+
+
+    // looking for a specific user based on email input by user
+    // *************
+    const user = await db().collection("users").findOne({
+      email,
+    });
+
+    const userPurchaseHistory = user.purchaseHistory
+
+    const purchasesQuery = { user: email }
+
+    const userPurchases = await db().collection('purchases').findOne(
+      purchasesQuery
+    )
+
+
+    if (!user) {
+      // The input password is incorrect
+      res.json({
+        success: false,
+        message: "Could not find user.",
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      user,
+      userPurchases
+    })
+
+  }
+  catch (err) {
+    res.json({
+      success: false,
+      error: err.toString()
+    })
   }
 })
 
